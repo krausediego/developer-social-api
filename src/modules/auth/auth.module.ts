@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth";
 
 import { auth } from "@/modules/auth";
+import { CreateProfileHook } from "@/modules/auth/hooks";
 
 @Module({
   imports: [
@@ -14,5 +15,6 @@ import { auth } from "@/modules/auth";
       },
     }),
   ],
+  providers: [CreateProfileHook],
 })
 export class AuthModule {}

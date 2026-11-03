@@ -8,11 +8,11 @@ export const userFollows = snakeCase.table(
     followerId: text()
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    followeeId: text()
+    followedId: text()
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     createdAt: timestamp().defaultNow().notNull(),
     updatedAt: timestamp().$onUpdate(() => new Date()),
   },
-  (table) => [primaryKey({ columns: [table.followerId, table.followeeId] })],
+  (table) => [primaryKey({ columns: [table.followerId, table.followedId] })],
 );

@@ -3,7 +3,7 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5439:5432"
     environment:
       POSTGRES_USER: developer
       POSTGRES_PASSWORD: developer_local

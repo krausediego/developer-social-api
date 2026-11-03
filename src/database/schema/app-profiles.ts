@@ -1,27 +1,30 @@
-import { createId } from "@paralleldrive/cuid2";
-import { boolean, snakeCase, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  primaryKey,
+  snakeCase,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 import { users } from "./users";
 
-export const appProfiles = snakeCase.table("app_profiles", {
-  id: text()
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  userId: text()
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  username: text().notNull(),
-  displayName: text().notNull(),
-  bio: text(),
-  location: text(),
-  websiteUrl: text(),
-  publicEmail: text(),
-  isProfilePublic: boolean().notNull().default(true),
-  showActivity: boolean().notNull().default(true),
-  showRepositories: boolean().notNull().default(true),
-  showStreak: boolean().notNull().default(true),
-  preferredLanguage: text().notNull().default("pt-BR"),
-  timezone: text().notNull().default("UTC"),
-  createdAt: timestamp().notNull().defaultNow(),
-  updatedAt: timestamp().$onUpdate(() => new Date()),
-});
+export const appProfiles = snakeCase.table(
+  "app_profiles",
+  {
+    userId: text()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    githubUserId: bigint({ mode: "bigint" }).unique(),
+    githubLogin: text(),
+    githubName: text(),
+    bio: text(),
+    avatarUrl: text(),
+    visibility: text().notNull(),
+    locale: text().notNull().default("private"),
+    timezone: text().notNull().default("UTC"),
+    publishedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().$onUpdate(() => new Date()),
+  },
+  (table) => [primaryKey({ columns: [table.userId] })],
+);

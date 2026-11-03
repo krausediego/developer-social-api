@@ -7,8 +7,8 @@ import * as schema from "@/database/schema";
 
 export const auth = betterAuth({
   basePath: "/api/auth",
-  baseURL: "http://localhost:3000",
-  trustedOrigins: [process.env.FRONTEND_BASE_URL!],
+  baseURL: "http://localhost:3333",
+  trustedOrigins: [process.env.FRONTEND_BASE_URL!, "http://localhost:3333"],
   plugins: [organization(), openAPI(), oauthPopup(), bearer()],
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -19,11 +19,11 @@ export const auth = betterAuth({
     database: {
       generateId: false,
     },
-    disableOriginCheck: true,
   },
   account: {
     encryptOAuthTokens: true,
   },
+  databaseHooks: {},
   socialProviders: {
     github: {
       clientId: process.env.GITHUB_CLIENT_ID!,
