@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a9651140-50b8-4908-b6ce-a2605cde9504",
+  "prevIds": [
+    "f0256be7-5864-49c8-9bdf-502952c299e7"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "app_profiles",
+        "display_name"
+      ],
+      "writes": [
+        "s|col|public.app_profiles.display_name",
+        "n|col|public.app_profiles.display_name",
+        "e|col|public.app_profiles.display_name"
+      ],
+      "reads": [
+        "n|tbl|public.app_profiles",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "app_profiles",
+        "name": "display_name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

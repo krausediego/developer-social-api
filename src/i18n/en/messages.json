@@ -1,0 +1,7 @@
+{
+  "PROFILE_UPDATED": "Profile updated successfully.",
+  "PROFILE_PUBLISHED": "Profile published successfully.",
+  "PROFILE_UNPUBLISHED": "Profile set to private.",
+  "GITHUB_SYNC_STARTED": "GitHub synchronization started.",
+  "CHALLENGE_CREATED": "Challenge created successfully."
+}

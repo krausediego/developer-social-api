@@ -1,0 +1,1 @@
+ALTER TABLE "app_profiles" ADD COLUMN "display_name" text;

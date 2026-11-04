@@ -1,0 +1,12 @@
+{
+  "IS_STRING": "{property} must be a string.",
+  "IS_NOT_EMPTY": "{property} cannot be empty.",
+  "IS_EMAIL": "{property} must be a valid email address.",
+  "IS_ENUM": "{property} contains an invalid value.",
+  "IS_INT": "{property} must be an integer.",
+  "MIN": "{property} must be at least {constraints.0}.",
+  "MAX": "{property} must be at most {constraints.0}.",
+  "MAX_LENGTH": "{property} must have at most {constraints.0} characters.",
+  "MIN_LENGTH": "{property} must have at least {constraints.0} character(s).",
+  "IS_TIMEZONE": "{property} must be a valid timezone."
+}

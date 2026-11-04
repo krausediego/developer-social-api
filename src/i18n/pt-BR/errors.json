@@ -1,0 +1,11 @@
+{
+  "INTERNAL_ERROR": "Ocorreu um erro interno no servidor.",
+  "UNAUTHORIZED": "Você precisa estar autenticado.",
+  "FORBIDDEN": "Você não tem permissão para realizar esta ação.",
+  "NOT_FOUND": "O recurso solicitado não foi encontrado.",
+  "PROFILE_NOT_FOUND": "Perfil não encontrado.",
+  "PROFILE_PRIVATE": "Este perfil é privado.",
+  "GITHUB_SYNC_FAILED": "Não foi possível sincronizar os dados do GitHub.",
+  "CHALLENGE_NOT_FOUND": "Desafio não encontrado.",
+  "CHALLENGE_ALREADY_STARTED": "Este desafio já começou e não pode ser alterado."
+}

@@ -1,0 +1,12 @@
+{
+  "IS_STRING": "{property} deve ser um texto.",
+  "IS_NOT_EMPTY": "{property} não pode estar vazio.",
+  "IS_EMAIL": "{property} deve ser um email válido.",
+  "IS_ENUM": "{property} contém um valor inválido.",
+  "IS_INT": "{property} deve ser um número inteiro.",
+  "MIN": "{property} deve ser maior ou igual a {constraints.0}.",
+  "MAX": "{property} deve ser menor ou igual a {constraints.0}.",
+  "MIN_LENGTH": "{property} deve ter pelo menos {constraints.0} caractere(s).",
+  "MAX_LENGTH": "{property} deve ter no máximo {constraints.0} caracteres.",
+  "IS_TIMEZONE": "{property} deve ser um fuso horário válido."
+}

@@ -17,6 +17,7 @@ export const appProfiles = snakeCase.table(
     githubUserId: bigint({ mode: "bigint" }).unique(),
     githubLogin: text(),
     githubName: text(),
+    displayName: text(),
     bio: text(),
     avatarUrl: text(),
     visibility: text().notNull(),
