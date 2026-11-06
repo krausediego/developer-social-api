@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Session } from "@nestjs/common";
+import { Body, Controller, Get, Patch } from "@nestjs/common";
 import {
   ApiCookieAuth,
   ApiOkResponse,
@@ -6,9 +6,13 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
-import type { UserSession } from "@thallesp/nestjs-better-auth";
+import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 
-import { UserResponseDto } from "./dto";
+import {
+  UpdateProfileVisibilityDto,
+  UpdateUserDto,
+  UserResponseDto,
+} from "./dto";
 import { UsersService } from "./users.service";
 
 @ApiTags("Users")
@@ -41,5 +45,27 @@ export class UsersController {
   @ApiUnauthorizedResponse({
     description: "Authentication required",
   })
-  async updateMe(): Promise<UserResponseDto> {}
+  async updateMe(
+    @Session() session: UserSession,
+    @Body() dto: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.updateMe(session.user.id, dto);
+  }
+
+  @Patch("me/visibility")
+  @ApiOperation({
+    summary: "Change profile visibility",
+  })
+  @ApiOkResponse({
+    type: UserResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: "Authentication required",
+  })
+  async changeVisibility(
+    @Session() session: UserSession,
+    @Body() dto: UpdateProfileVisibilityDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.changeVisibility(session.user.id, dto);
+  }
 }

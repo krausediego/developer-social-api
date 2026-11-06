@@ -57,7 +57,7 @@ export class UpdateUserDto {
   @IsEnum(Locale, {
     message: i18nValidationMessage<I18nTranslations>("validation.IS_ENUM"),
   })
-  locale?: string;
+  locale?: Locale;
 
   @ApiPropertyOptional({
     example: "America/Sao_Paulo",

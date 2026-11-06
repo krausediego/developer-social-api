@@ -62,10 +62,10 @@ export class UserResponseDto {
   @ApiProperty({ example: "clxyz123" })
   id!: string;
 
-  @ApiProperty({ example: "Diego Krause" })
+  @ApiProperty({ example: "John Due" })
   name!: string;
 
-  @ApiProperty({ example: "diego@example.com" })
+  @ApiProperty({ example: "john@due.com" })
   email!: string;
 
   @ApiProperty({ type: () => GithubIdentityDto })

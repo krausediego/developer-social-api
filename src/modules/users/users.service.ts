@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectDrizzle } from "@nestjs/drizzle";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { I18nContext, I18nService } from "nestjs-i18n";
 
 import { appProfiles, users } from "@/database/schema";
 
-import { UserResponseDto } from "./dto";
+import {
+  UpdateProfileVisibilityDto,
+  UpdateUserDto,
+  UserResponseDto,
+} from "./dto";
 
 @Injectable()
 export class UsersService {
@@ -73,7 +77,61 @@ export class UsersService {
     };
   }
 
-  async updateMe(userId: string): Promise<UserResponseDto> {}
+  async updateMe(userId: string, dto: UpdateUserDto): Promise<UserResponseDto> {
+    const [updatedProfile] = await this.db
+      .update(appProfiles)
+      .set({
+        ...(dto.displayName !== undefined && {
+          displayName: dto.displayName,
+        }),
+        ...(dto.bio !== undefined && {
+          bio: dto.bio,
+        }),
+        ...(dto.locale !== undefined && {
+          locale: dto.locale,
+        }),
+        ...(dto.timezone !== undefined && {
+          timezone: dto.timezone,
+        }),
+      })
+      .where(eq(appProfiles.userId, userId))
+      .returning({ userId: appProfiles.userId });
+
+    if (!updatedProfile) {
+      throw this.profileNotFound();
+    }
+
+    // TODO: if changes timezone, recalculate streaks.
+
+    return this.findMe(updatedProfile.userId);
+  }
+
+  async changeVisibility(
+    userId: string,
+    dto: UpdateProfileVisibilityDto,
+  ): Promise<UserResponseDto> {
+    const [updatedVisibility] = await this.db
+      .update(appProfiles)
+      .set({
+        visibility: dto.visibility,
+        publishedAt: sql`
+          CASE
+            WHEN ${dto.visibility} = 'private' THEN NULL
+            WHEN ${appProfiles.visibility} = 'public'
+              THEN ${appProfiles.publishedAt}
+            ELSE NOW()
+          END
+        `,
+      })
+      .where(eq(appProfiles.userId, userId))
+      .returning({ userId: appProfiles.userId });
+
+    if (!updatedVisibility) {
+      throw this.profileNotFound();
+    }
+
+    return this.findMe(userId);
+  }
 
   private profileNotFound(): NotFoundException {
     const lang = I18nContext.current()?.lang ?? "pt-BR";

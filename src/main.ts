@@ -1,5 +1,6 @@
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { apiReference } from "@scalar/nestjs-api-reference";
 import { I18nValidationExceptionFilter, I18nValidationPipe } from "nestjs-i18n";
 import { Logger } from "nestjs-pino";
 
@@ -45,6 +46,8 @@ async function bootstrap() {
   SwaggerModule.setup("api", app, documentFactory, {
     jsonDocumentUrl: "docs-json",
   });
+
+  app.use("/reference", apiReference({ content: documentFactory() }));
 
   await app.listen(process.env.PORT ?? 3000);
 }

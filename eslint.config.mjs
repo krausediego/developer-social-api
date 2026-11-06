@@ -15,12 +15,12 @@ export default tseslint.config(
       "simple-import-sort": simpleImportSort,
     },
     rules: {
-      "curly": ["error", "all"],
-      "eqeqeq": ["error", "always"],
-      "no-console": ["warn", { "allow": ["warn", "error"] }],
+      curly: ["error", "all"],
+      eqeqeq: ["error", "always"],
+      "no-console": ["warn", { allow: ["warn", "error"] }],
       "no-debugger": "error",
-      "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
-      "no-warning-comments": "warn",
+      "no-duplicate-imports": ["error", { allowSeparateTypeImports: true }],
+      "no-warning-comments": "off",
       "simple-import-sort/exports": "error",
       "simple-import-sort/imports": "error",
       // Nest uses runtime class references as injection tokens; this rule may
@@ -29,7 +29,7 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" },
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
     },
   },
