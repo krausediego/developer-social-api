@@ -1,4 +1,4 @@
-import { Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
+import { Controller, Get, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import {
   ApiAcceptedResponse,
   ApiCookieAuth,
@@ -25,5 +25,13 @@ export class GithubSyncController {
   })
   async requestSync(@Session() session: UserSession) {
     return this.githubSyncService.enqueueRepositoriesSync(session.user.id);
+  }
+
+  @Get("status")
+  @ApiOperation({
+    summary: "Get Github synchronization status",
+  })
+  async getStatus(@Session() session: UserSession) {
+    return this.githubSyncService.getRepositoriesSyncStatus(session.user.id);
   }
 }
