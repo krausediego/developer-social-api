@@ -1,0 +1,74 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2a61b9e1-67d3-409f-89bf-d8c86058e49a",
+  "prevIds": [
+    "a9651140-50b8-4908-b6ce-a2605cde9504"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "resourceType"
+      ],
+      "writes": [
+        "s|enum|public.resourceType",
+        "n|enum|public.resourceType",
+        "e|enum|public.resourceType",
+        "n|type|public.resourceType"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "github_sync_cursors",
+        "resource_type"
+      ],
+      "writes": [
+        "s|colprop|public.github_sync_cursors.resource_type.type",
+        "s|colprop|public.github_sync_cursors.resource_type.default"
+      ],
+      "reads": [
+        "n|tbl|public.github_sync_cursors",
+        "n|sch|public",
+        "n|col|public.github_sync_cursors.resource_type",
+        "n|enum|public.resourceType"
+      ],
+      "sqlHash": "85ea72c8aa7951f2"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "resourceType",
+        "values": [
+          "repositories",
+          "commits",
+          "pull_requests",
+          "issues",
+          "reviews",
+          "languages"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"github_sync_cursors\",\"resource_type\"]",
+      "set": {
+        "type": "resourceType",
+        "typeSchema": "public"
+      }
+    }
+  ]
+}

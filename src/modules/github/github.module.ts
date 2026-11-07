@@ -8,6 +8,7 @@ import { GithubSyncController } from "./github-sync.controller";
 import { GithubSyncService } from "./github-sync.service";
 import { GithubSyncCursorService } from "./github-sync-cursor.service";
 import { GithubSyncProcessor } from "./github-sync-processor";
+import { GithubSyncSchedulerService } from "./github-sync-scheduler.service";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { GithubSyncProcessor } from "./github-sync-processor";
     GithubSyncService,
     GithubRepositoriesService,
     GithubSyncCursorService,
+    GithubSyncSchedulerService,
   ],
 })
 export class GithubModule {}

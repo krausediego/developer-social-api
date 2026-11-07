@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { createObserveModule } from "@nestjs/observe";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerModule } from "@nestjs/throttler";
 
 import { DatabaseModule } from "@/database";
@@ -29,6 +30,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         limit: 30,
       },
     ]),
+    ScheduleModule.forRoot(),
     LoggingModule,
     AppI18nModule,
     QueuesModule,

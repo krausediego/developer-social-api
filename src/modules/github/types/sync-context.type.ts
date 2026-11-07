@@ -1,14 +1,10 @@
-export type GithubSyncResources =
-  | "repositories"
-  | "commits"
-  | "pull_requests"
-  | "issues"
-  | "reviews"
-  | "languages";
+import type { resourceTypes } from "@/database/schema";
+
+export type GithubSyncResource = (typeof resourceTypes.enumValues)[number];
 
 export interface GithubSyncContext {
   userId: string;
-  resourceType: GithubSyncContext;
+  resourceType: GithubSyncResource;
   repositoryId: string | null;
 }
 

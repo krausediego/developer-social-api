@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { Injectable } from "@nestjs/common";
 import { Job } from "bullmq";
 import { PinoLogger } from "nestjs-pino";
@@ -6,7 +6,7 @@ import { PinoLogger } from "nestjs-pino";
 import { GITHUB_JOBS, QUEUES } from "@/infrastructure/queues";
 
 import { GithubRepositoriesService } from "./github-repositories.service";
-import { SyncRepositoriesJobData } from "./github-sync.service";
+import { GithubSyncJobData } from "./github-sync.service";
 import { GithubSyncCursorService } from "./github-sync-cursor.service";
 
 @Processor(QUEUES.GITHUB_SYNC, {
@@ -16,54 +16,72 @@ import { GithubSyncCursorService } from "./github-sync-cursor.service";
 export class GithubSyncProcessor extends WorkerHost {
   constructor(
     private readonly githubRepositoriesService: GithubRepositoriesService,
-    private readonly logger: PinoLogger,
     private readonly githubSyncCursorService: GithubSyncCursorService,
+    private readonly logger: PinoLogger,
   ) {
     super();
     this.logger.setContext(GithubSyncProcessor.name);
   }
 
-  async process(job: Job<SyncRepositoriesJobData>): Promise<void> {
+  async process(job: Job<GithubSyncJobData>) {
+    const context = job.data;
+
     switch (job.name) {
       case GITHUB_JOBS.SYNC_REPOSITORIES:
-        await this.syncRepositories(job);
-        return;
+        if (
+          context.resourceType !== "repositories" ||
+          context.repositoryId !== null
+        ) {
+          throw new Error("INVALID_SYNC_CONTEXT");
+        }
+
+        return this.executeSync(job, () =>
+          this.githubRepositoriesService.sync(context.userId),
+        );
 
       default:
         throw new Error(`Unknown job type: ${job.name}`);
     }
   }
 
-  private async syncRepositories(
-    job: Job<SyncRepositoriesJobData>,
-  ): Promise<void> {
-    const { userId } = job.data;
+  private async executeSync<T>(
+    job: Job<GithubSyncJobData>,
+    handler: () => Promise<T>,
+  ): Promise<T> {
+    const context = job.data;
 
-    await this.githubSyncCursorService.markStarted(userId, job.attemptsMade);
+    await this.githubSyncCursorService.markStarted(context, job.attemptsMade);
 
     try {
-      this.logger.info(
-        { jobId: job.id, userId },
-        "Starting Github repository sync",
-      );
+      this.logger.info({ jobId: job.id, ...context }, "GitHub sync started");
 
-      const result = await this.githubRepositoriesService.sync(userId);
+      const result = await handler();
 
-      await this.githubSyncCursorService.markSucceeded(userId);
+      await this.githubSyncCursorService.markSucceeded(context);
 
-      this.logger.info(
-        { jobId: job.id, userId, ...result },
-        "Github repository sync completed",
-      );
+      this.logger.info({ jobId: job.id, ...context }, "GitHub sync completed");
+
+      return result;
     } catch (error) {
-      const code = this.getErrorCode(error);
+      const errorCode = this.getErrorCode(error);
 
-      await this.githubSyncCursorService.markFailed(
-        userId,
-        code,
-        job.attemptsMade + 1,
-      );
+      try {
+        await this.githubSyncCursorService.markFailed(
+          context,
+          errorCode,
+          job.attemptsMade + 1,
+        );
+      } catch (cursorError) {
+        this.logger.error(
+          {
+            jobId: job.id,
+            error: cursorError,
+          },
+          "Failed to persist GitHub sync error state",
+        );
+      }
 
+      // BullMQ precisa receber o erro para tentar novamente.
       throw error;
     }
   }
@@ -81,5 +99,22 @@ export class GithubSyncProcessor extends WorkerHost {
     }
 
     return "GITHUB_SYNC_FAILED";
+  }
+
+  @OnWorkerEvent("failed")
+  onFailed(job: Job<GithubSyncJobData> | undefined, error: Error) {
+    this.logger.error(
+      {
+        jobId: job?.id,
+        jobName: job?.name,
+        userId: job?.data.userId,
+        resourceType: job?.data.resourceType,
+        repositoryId: job?.data.repositoryId,
+        attemptsMade: job?.attemptsMade,
+        maxAttempts: job?.opts.attempts,
+        err: error,
+      },
+      "GitHub sync job failed",
+    );
   }
 }

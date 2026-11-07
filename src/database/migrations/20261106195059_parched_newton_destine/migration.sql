@@ -1,0 +1,2 @@
+CREATE TYPE "resourceType" AS ENUM('repositories', 'commits', 'pull_requests', 'issues', 'reviews', 'languages');--> statement-breakpoint
+ALTER TABLE "github_sync_cursors" ALTER COLUMN "resource_type" SET DATA TYPE "resourceType" USING "resource_type"::"resourceType";

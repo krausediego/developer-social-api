@@ -111,7 +111,8 @@ export class GithubSyncCursorService {
         errorCode: null,
         updatedAt: now,
       })
-      .where(this.scopeWhere(context));
+      .where(this.scopeWhere(context))
+      .returning({ id: githubSyncCursors.id });
 
     if (!updated) {
       throw new Error("SYNC_CURSOR_NOT_FOUND");

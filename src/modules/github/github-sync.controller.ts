@@ -34,4 +34,20 @@ export class GithubSyncController {
   async getStatus(@Session() session: UserSession) {
     return this.githubSyncService.getRepositoriesSyncStatus(session.user.id);
   }
+
+  @Post("ensure")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Ensure Github data synchronization",
+  })
+  async ensureSync(@Session() session: UserSession) {
+    return this.githubSyncService.enqueue(
+      {
+        userId: session.user.id,
+        resourceType: "repositories",
+        repositoryId: null,
+      },
+      "automatic",
+    );
+  }
 }

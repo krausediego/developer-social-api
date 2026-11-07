@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import {
   integer,
+  pgEnum,
   snakeCase,
   text,
   timestamp,
@@ -9,6 +10,15 @@ import {
 
 import { githubRepositories } from "./github-repositories";
 import { users } from "./users";
+
+export const resourceTypes = pgEnum("resourceType", [
+  "repositories",
+  "commits",
+  "pull_requests",
+  "issues",
+  "reviews",
+  "languages",
+]);
 
 export const githubSyncCursors = snakeCase.table(
   "github_sync_cursors",
@@ -20,7 +30,7 @@ export const githubSyncCursors = snakeCase.table(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     repositoryId: text().references(() => githubRepositories.id),
-    resourceType: text().notNull(),
+    resourceType: resourceTypes().notNull(),
     cursor: text(),
     etag: text(),
     status: text().notNull(),
