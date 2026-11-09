@@ -1,11 +1,16 @@
 import { Injectable } from "@nestjs/common";
 import { InjectDrizzle } from "@nestjs/drizzle";
 import { Cron, CronExpression } from "@nestjs/schedule";
-import { and, asc, eq, isNull, lt, lte, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, lte, or } from "drizzle-orm";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { PinoLogger } from "nestjs-pino";
 
-import { accounts, githubSyncCursors } from "@/database/schema";
+import {
+  accounts,
+  githubRepositories,
+  githubSyncCursors,
+  userRepositoryAccess,
+} from "@/database/schema";
 
 import { GithubSyncService } from "./github-sync.service";
 
@@ -104,5 +109,104 @@ export class GithubSyncSchedulerService {
       { candidates: cursors.length, queued, failed },
       "Github sync scheduler sweep completed",
     );
+  }
+
+  @Cron(CronExpression.EVERY_5_MINUTES, {
+    name: "github-commits-due",
+    waitForCompletion: true,
+  })
+  async enqueueDueCommits(): Promise<void> {
+    if (process.env.GITHUB_SYNC_SCHEDULER_ENABLED === "false") {
+      return;
+    }
+
+    const now = new Date();
+
+    const candidates = await this.db
+      .select({
+        userId: userRepositoryAccess.userId,
+        repositoryId: userRepositoryAccess.repositoryId,
+      })
+      .from(userRepositoryAccess)
+      .innerJoin(
+        githubRepositories,
+        eq(githubRepositories.id, userRepositoryAccess.repositoryId),
+      )
+      .innerJoin(
+        accounts,
+        and(
+          eq(accounts.userId, userRepositoryAccess.userId),
+          eq(accounts.providerId, "github"),
+        ),
+      )
+      .leftJoin(
+        githubSyncCursors,
+        and(
+          eq(githubSyncCursors.userId, userRepositoryAccess.userId),
+          eq(githubSyncCursors.repositoryId, userRepositoryAccess.repositoryId),
+          eq(githubSyncCursors.resourceType, "commits"),
+        ),
+      )
+      .where(
+        and(
+          eq(userRepositoryAccess.syncEnabled, true),
+          eq(githubRepositories.visibility, "public"),
+          or(
+            isNull(githubSyncCursors.id),
+            and(
+              inArray(githubSyncCursors.status, ["idle", "error"]),
+              or(
+                isNull(githubSyncCursors.nextSyncAt),
+                lte(githubSyncCursors.nextSyncAt, now),
+              ),
+            ),
+          ),
+        ),
+      )
+      .orderBy(
+        asc(userRepositoryAccess.userId),
+        asc(userRepositoryAccess.repositoryId),
+      )
+      .limit(25);
+
+    let queued = 0;
+    let failed = 0;
+
+    for (const candidate of candidates) {
+      try {
+        const result = await this.githubSyncService.enqueue(
+          {
+            userId: candidate.userId,
+            resourceType: "commits",
+            repositoryId: candidate.repositoryId,
+          },
+          "automatic",
+        );
+
+        if (result.status === "queued") {
+          queued++;
+        }
+      } catch (error) {
+        failed++;
+
+        this.logger.error(
+          {
+            userId: candidate.userId,
+            repositoryId: candidate.repositoryId,
+            err: error,
+          },
+          "Failed to enqueue Github commits sync",
+        );
+      }
+
+      this.logger.info(
+        {
+          candidates: candidates.length,
+          queued,
+          failed,
+        },
+        "Github commits scheduler sweep completed",
+      );
+    }
   }
 }

@@ -49,8 +49,10 @@ export class GithubSyncProcessor extends WorkerHost {
           throw new Error("INVALID_SYNC_CONTEXT");
         }
 
-        return this.executeSync(job, () =>
-          this.githubCommitsService.sync(context),
+        return this.executeSync(
+          job,
+          () => this.githubCommitsService.sync(context),
+          (result) => !result.hasMore,
         );
 
       default:
@@ -61,6 +63,7 @@ export class GithubSyncProcessor extends WorkerHost {
   private async executeSync<T>(
     job: Job<GithubSyncJobData>,
     handler: () => Promise<T>,
+    isFinished: (result: T) => boolean = () => true,
   ): Promise<T> {
     const context = job.data;
 
@@ -71,12 +74,23 @@ export class GithubSyncProcessor extends WorkerHost {
 
       const result = await handler();
 
-      await this.githubSyncCursorService.markSucceeded(context);
+      if (isFinished(result)) {
+        await this.githubSyncCursorService.markSucceeded(context, {
+          clearCursor: context.resourceType === "commits",
+        });
 
-      this.logger.info(
-        { jobId: job.id, ...context, result },
-        "GitHub sync completed",
-      );
+        this.logger.info(
+          { jobId: job.id, ...context, result },
+          "GitHub sync completed",
+        );
+      } else {
+        await this.githubSyncCursorService.scheduleContinuation(context);
+
+        this.logger.info(
+          { jobId: job.id, ...context, result },
+          "Github sync batch completed; continuation scheduled",
+        );
+      }
 
       return result;
     } catch (error) {

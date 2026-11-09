@@ -1,114 +1,312 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Developer Social API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> A developer-focused social platform powered by GitHub activity.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Developer Social API is the backend of a personal project designed to transform GitHub activity into developer profiles, contribution statistics, coding streaks, and community challenges.
 
-## Description
+The project focuses on backend architecture, asynchronous processing, data consistency, and reliable integration with the GitHub API.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**Status:** 🚧 Work in progress — backend under active development.
 
-## Project setup
+## Tech Stack
 
-```bash
-$ pnpm install
+| Technology       | Purpose                           |
+| ---------------- | --------------------------------- |
+| NestJS           | Backend framework                 |
+| TypeScript       | Type-safe development             |
+| PostgreSQL       | Relational database               |
+| Drizzle ORM      | Database queries and migrations   |
+| Redis            | Queue infrastructure              |
+| BullMQ           | Background job processing         |
+| Better Auth      | Authentication and GitHub OAuth   |
+| Docker Compose   | Local infrastructure              |
+| Pino             | Structured logging                |
+| nestjs-i18n      | Internationalization (EN / pt-BR) |
+| Swagger / Scalar | API documentation                 |
+| Vitest           | Testing                           |
+
+## Features
+
+### Authentication & Profiles
+
+- GitHub OAuth authentication
+- Authenticated user profile management
+- Public and private profile visibility
+- GitHub account metadata integration
+- User locale and timezone preferences
+- Public developer profile endpoints
+
+Profiles are **private by default** and can be explicitly published by their owners.
+
+### GitHub Synchronization
+
+- Automatic repository synchronization
+- Commit collection per repository
+- Paginated GitHub API requests
+- Historical commit backfill
+- Incremental synchronization
+- Persistent synchronization cursors
+- Idempotent database upserts
+- Background processing with retries and deduplication
+- Scheduled synchronization jobs
+
+### Activity Tracking
+
+GitHub contributions are normalized and stored in a shared activity event model.
+
+Currently supported:
+
+- Commit events
+
+Planned activity sources:
+
+- Pull requests opened
+- Issues opened
+- Pull request reviews submitted
+
+These events will power daily activity statistics, developer streaks, and community challenges.
+
+## Architecture
+
+GitHub synchronization is handled asynchronously to avoid blocking HTTP requests.
+
+```text
+                NestJS Scheduler
+                       |
+                       v
+              Check Sync Cursors
+                       |
+                       v
+             Find Outdated Resources
+                       |
+                       v
+                 Redis + BullMQ
+                       |
+                       v
+                GitHub Sync Worker
+                       |
+                       v
+                  GitHub API
+                       |
+                       v
+              Validate & Normalize
+                       |
+                       v
+                 PostgreSQL
+                  (Drizzle)
+                       |
+          +------------+------------+
+          |            |            |
+          v            v            v
+     Repositories    Activity     Sync Cursors
+                      Events
 ```
 
-## Compile and run the project
+### Synchronization Strategy
 
-```bash
-# development
-$ pnpm run start
+Each synchronization job operates on a specific resource context:
 
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+```typescript
+interface GithubSyncContext {
+  userId: string;
+  resourceType: GithubSyncResource;
+  repositoryId: string | null;
+}
 ```
 
-## Run tests
+This design supports:
+
+- Independent synchronization per resource
+- Deduplication of concurrent jobs
+- Historical backfills
+- Incremental updates
+- Per-resource expiration policies
+- Retry handling
+- Persistent synchronization progress
+
+The scheduler periodically checks for outdated resources and enqueues jobs only when synchronization is required.
+
+## Database
+
+The application uses PostgreSQL with Drizzle ORM.
+
+Some of the main tables include:
+
+| Table                    | Responsibility                     |
+| ------------------------ | ---------------------------------- |
+| `app_profiles`           | Developer profile information      |
+| `github_repositories`    | Repository metadata                |
+| `user_repository_access` | User-to-repository associations    |
+| `github_activity_events` | Normalized GitHub activity         |
+| `github_sync_cursors`    | Synchronization state and progress |
+| `user_daily_activities`  | Daily activity aggregates          |
+| `user_follows`           | Developer relationships            |
+| `challenges`             | Community challenges               |
+| `challenge_participants` | Challenge enrollment               |
+| `challenge_progress`     | Challenge progress tracking        |
+| `challenge_achievements` | Challenge achievements             |
+
+Authentication and organization data are managed through Better Auth.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js
+- pnpm
+- Docker
+- Docker Compose
+- GitHub OAuth App credentials
+
+### Installation
+
+Clone the repository:
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+git clone https://github.com/krausediego/developer-social-api
+cd ./developer-social-api
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Install dependencies:
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm install
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Environment Variables
 
-## Observability
+Configure your local environment using a `.env` file.
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+The application requires configuration for:
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+- PostgreSQL
+- Redis
+- Better Auth
+- GitHub OAuth
+- Application URLs and allowed origins
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+> Never commit `.env` files, OAuth secrets, access tokens, or database credentials.
 
-## Resources
+### Start Infrastructure
 
-Check out a few resources that may come in handy when working with NestJS:
+Start PostgreSQL and Redis:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+docker compose up -d
+```
 
-## Support
+Apply the database migrations using the migration script configured in `package.json`.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Run the Application
 
-## Stay in touch
+```bash
+pnpm start:dev
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+The API runs locally with interactive documentation available through the configured Swagger / Scalar endpoint.
 
-## License
+## API Endpoints
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Users
+
+| Method  | Endpoint                      | Description               |
+| ------- | ----------------------------- | ------------------------- |
+| `GET`   | `/api/v1/users/me`            | Get authenticated user    |
+| `PATCH` | `/api/v1/users/me`            | Update user profile       |
+| `PATCH` | `/api/v1/users/me/visibility` | Update profile visibility |
+
+### Profiles
+
+| Method | Endpoint                        | Description                  |
+| ------ | ------------------------------- | ---------------------------- |
+| `GET`  | `/api/v1/profiles/:githubLogin` | Get public developer profile |
+
+### GitHub Synchronization
+
+| Method | Endpoint                     | Description                                  |
+| ------ | ---------------------------- | -------------------------------------------- |
+| `POST` | `/api/v1/github/sync`        | Request repository synchronization           |
+| `POST` | `/api/v1/github/sync/ensure` | Ensure synchronization when data is outdated |
+| `GET`  | `/api/v1/github/sync/status` | Get synchronization status                   |
+
+GitHub synchronization also runs automatically through scheduled background jobs.
+
+Development-only endpoints are not part of the intended public API.
+
+## Roadmap
+
+### Foundation
+
+- [x] NestJS project setup
+- [x] PostgreSQL and Drizzle ORM
+- [x] GitHub OAuth authentication
+- [x] User profile management
+- [x] Public/private profile visibility
+- [x] Internationalization
+- [x] Structured logging
+- [x] API documentation
+
+### GitHub Integration
+
+- [x] Repository synchronization
+- [x] Redis and BullMQ integration
+- [x] Background job processing
+- [x] Scheduled synchronization
+- [x] Synchronization cursors
+- [x] Commit collection
+- [x] Historical backfill
+- [x] Incremental synchronization
+- [x] Activity event persistence
+
+### Activity & Social Features
+
+- [ ] Daily activity aggregation
+- [ ] Developer streak calculation from collected events
+- [ ] Pull request synchronization
+- [ ] Issue synchronization
+- [ ] Review synchronization
+- [ ] Developer following workflows
+- [ ] Organization-based challenges
+- [ ] Challenge progress tracking
+- [ ] Challenge achievements
+
+### Future
+
+- [ ] Frontend application
+- [ ] Production deployment
+- [ ] Monitoring and observability improvements
+
+## Privacy & Security
+
+Privacy is an important part of the project.
+
+- Developer profiles are private by default.
+- Users control whether their profiles are publicly visible.
+- GitHub OAuth tokens are handled through the authentication layer.
+- Private repository details must not be exposed through public endpoints.
+- Synchronization jobs operate within a user's authorized repository access.
+
+This project is still under development and is not production-ready.
+
+## Project Goals
+
+Beyond building a social platform, this project explores practical backend engineering challenges:
+
+- Designing modular and maintainable APIs
+- Working with third-party integrations
+- Processing asynchronous workloads
+- Building reliable synchronization pipelines
+- Handling pagination, retries, and rate limits
+- Maintaining data consistency
+- Designing efficient database models
+- Supporting internationalization and privacy
+
+## Contributing
+
+This is currently a personal project under active development.
+
+Contributions, feedback, and suggestions may be considered as the project evolves.
+
+---
+
+**Built with NestJS, TypeScript, and curiosity.**

@@ -12,6 +12,7 @@ import {
   githubRepositories,
   userRepositoryAccess,
 } from "@/database/schema";
+import { CommitBackfillCheckpoint, parseCommitCheckpoint } from "@/helpers";
 import { auth } from "@/modules/auth";
 
 import { GithubSyncCursorService } from "./github-sync-cursor.service";
@@ -42,6 +43,8 @@ export interface GithubCommitsSyncResult {
   commitsIgnored: number;
   pagesFetched: number;
   completedAt: Date;
+  mode: "backfill" | "incremental";
+  hasMore: boolean;
 }
 
 @Injectable()
@@ -96,6 +99,8 @@ export class GithubCommitsService {
       commitsIgnored: 0,
       pagesFetched: 0,
       completedAt: new Date(),
+      mode: "backfill",
+      hasMore: false,
     });
 
     if (!repository.syncEnabled) {
@@ -123,10 +128,23 @@ export class GithubCommitsService {
 
     const cursor = await this.githubSyncCursorService.getCursor(context);
     const startedAt = new Date();
+    const checkpoint = parseCommitCheckpoint(cursor?.cursor ?? null);
 
-    const since = cursor?.lastSuccessAt
-      ? new Date(cursor.lastSuccessAt.getTime() - OVERLAP_HOURS * 60 * 60_000)
-      : new Date(startedAt.getTime() - INITIAL_HISTORY_DAYS * 24 * 60 * 60_000);
+    const isBackfill = checkpoint !== null || !cursor?.lastSuccessAt;
+    const mode = isBackfill ? ("backfill" as const) : ("incremental" as const);
+
+    const since = checkpoint
+      ? new Date(checkpoint.since)
+      : isBackfill
+        ? new Date(
+            startedAt.getTime() - INITIAL_HISTORY_DAYS * 24 * 60 * 60_000,
+          )
+        : new Date(
+            cursor!.lastSuccessAt!.getTime() - OVERLAP_HOURS * 60 * 60_000,
+          );
+
+    const until = checkpoint ? new Date(checkpoint.until) : startedAt;
+    const firstPage = checkpoint?.nextPage ?? 1;
 
     const [owner, name, extra] = repository.fullName.split("/");
 
@@ -138,8 +156,11 @@ export class GithubCommitsService {
     let eventsUpsetter = 0;
     let commitsIgnored = 0;
     let pagesFetched = 0;
+    let finished = false;
 
-    for (let page = 1; page <= MAX_PAGES; page++) {
+    for (let offset = 0; offset <= MAX_PAGES; offset++) {
+      const page = firstPage + offset;
+
       const url = new URL(
         `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/commits`,
       );
@@ -147,7 +168,7 @@ export class GithubCommitsService {
       url.searchParams.set("sha", repository.defaultBranch);
       url.searchParams.set("author", profile.githubLogin);
       url.searchParams.set("since", since.toISOString());
-      url.searchParams.set("until", startedAt.toISOString());
+      url.searchParams.set("until", until.toISOString());
       url.searchParams.set("per_page", String(PAGE_SIZE));
       url.searchParams.set("page", String(page));
 
@@ -301,7 +322,23 @@ export class GithubCommitsService {
       }
 
       if (!hasNext) {
+        finished = true;
         break;
+      }
+
+      if (isBackfill) {
+        const nextCheckpoint: CommitBackfillCheckpoint = {
+          version: 1,
+          kind: "commits-backfill",
+          since: since.toISOString(),
+          until: until.toISOString(),
+          nextPage: page + 1,
+        };
+
+        await this.githubSyncCursorService.saveCheckpoint(
+          context,
+          JSON.stringify(nextCheckpoint),
+        );
       }
 
       // Não marcar sucesso se o histórico
@@ -311,6 +348,10 @@ export class GithubCommitsService {
       }
     }
 
+    if (!finished && !isBackfill) {
+      throw new Error("GITHUB_COMMITS_PAGE_LIMIT_EXCEEDED");
+    }
+
     return {
       repositoryId,
       commitsFetched,
@@ -318,6 +359,8 @@ export class GithubCommitsService {
       commitsIgnored,
       pagesFetched,
       completedAt: new Date(),
+      mode,
+      hasMore: !finished,
     };
   }
 
