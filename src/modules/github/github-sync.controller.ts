@@ -1,4 +1,12 @@
-import { Controller, Get, HttpCode, HttpStatus, Post } from "@nestjs/common";
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from "@nestjs/common";
 import {
   ApiAcceptedResponse,
   ApiCookieAuth,
@@ -48,6 +56,29 @@ export class GithubSyncController {
         repositoryId: null,
       },
       "automatic",
+    );
+  }
+
+  @Post("commits/:repositoryId")
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({
+    summary: "Queue a GitHub commits sync (development)",
+  })
+  async syncCommits(
+    @Session() session: UserSession,
+    @Param("repositoryId") repositoryId: string,
+  ) {
+    if (process.env.NODE_ENV !== "development") {
+      throw new ForbiddenException();
+    }
+
+    return this.githubSyncService.enqueue(
+      {
+        userId: session.user.id,
+        resourceType: "commits",
+        repositoryId,
+      },
+      "manual",
     );
   }
 }

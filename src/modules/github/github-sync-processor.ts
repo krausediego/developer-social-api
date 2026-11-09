@@ -5,6 +5,7 @@ import { PinoLogger } from "nestjs-pino";
 
 import { GITHUB_JOBS, QUEUES } from "@/infrastructure/queues";
 
+import { GithubCommitsService } from "./github-commits.service";
 import { GithubRepositoriesService } from "./github-repositories.service";
 import { GithubSyncJobData } from "./github-sync.service";
 import { GithubSyncCursorService } from "./github-sync-cursor.service";
@@ -15,8 +16,9 @@ import { GithubSyncCursorService } from "./github-sync-cursor.service";
 @Injectable()
 export class GithubSyncProcessor extends WorkerHost {
   constructor(
-    private readonly githubRepositoriesService: GithubRepositoriesService,
     private readonly githubSyncCursorService: GithubSyncCursorService,
+    private readonly githubRepositoriesService: GithubRepositoriesService,
+    private readonly githubCommitsService: GithubCommitsService,
     private readonly logger: PinoLogger,
   ) {
     super();
@@ -39,6 +41,18 @@ export class GithubSyncProcessor extends WorkerHost {
           this.githubRepositoriesService.sync(context.userId),
         );
 
+      case GITHUB_JOBS.SYNC_COMMITS:
+        if (
+          context.resourceType !== "commits" ||
+          context.repositoryId === null
+        ) {
+          throw new Error("INVALID_SYNC_CONTEXT");
+        }
+
+        return this.executeSync(job, () =>
+          this.githubCommitsService.sync(context),
+        );
+
       default:
         throw new Error(`Unknown job type: ${job.name}`);
     }
@@ -59,7 +73,10 @@ export class GithubSyncProcessor extends WorkerHost {
 
       await this.githubSyncCursorService.markSucceeded(context);
 
-      this.logger.info({ jobId: job.id, ...context }, "GitHub sync completed");
+      this.logger.info(
+        { jobId: job.id, ...context, result },
+        "GitHub sync completed",
+      );
 
       return result;
     } catch (error) {

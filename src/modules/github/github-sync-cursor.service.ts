@@ -98,7 +98,10 @@ export class GithubSyncCursorService {
       });
   }
 
-  async markSucceeded(context: GithubSyncContext): Promise<Date> {
+  async markSucceeded(
+    context: GithubSyncContext,
+    options: { clearCursor?: boolean } = {},
+  ): Promise<Date> {
     const now = new Date();
 
     const [updated] = await this.db
@@ -109,7 +112,7 @@ export class GithubSyncCursorService {
         nextSyncAt: new Date(now.getTime() + SYNC_INTERVAL_MS),
         retryCount: 0,
         errorCode: null,
-        updatedAt: now,
+        ...(options.clearCursor ? { cursor: null } : {}),
       })
       .where(this.scopeWhere(context))
       .returning({ id: githubSyncCursors.id });
@@ -138,6 +141,38 @@ export class GithubSyncCursorService {
         updatedAt: now,
       })
       .where(this.scopeWhere(context));
+  }
+
+  async saveCheckpoint(context: GithubSyncContext, checkpoint: string) {
+    const [updated] = await this.db
+      .update(githubSyncCursors)
+      .set({
+        cursor: checkpoint,
+      })
+      .where(this.scopeWhere(context))
+      .returning({ id: githubSyncCursors.id });
+
+    if (!updated) {
+      throw new Error("SYNC_CURSOR_NOT_FOUND");
+    }
+  }
+
+  async scheduleContinuation(context: GithubSyncContext, delayMs = 60_000) {
+    const now = new Date();
+
+    const [updated] = await this.db
+      .update(githubSyncCursors)
+      .set({
+        status: "idle",
+        nextSyncAt: new Date(now.getTime() + delayMs),
+        errorCode: null,
+      })
+      .where(this.scopeWhere(context))
+      .returning({ id: githubSyncCursors.id });
+
+    if (!updated) {
+      throw new Error("SYNC_CURSOR_NOT_FOUND");
+    }
   }
 
   private scopeWhere(context: GithubSyncContext) {
