@@ -1,10 +1,9 @@
 import {
   Controller,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
-  Param,
+  NotFoundException,
   Post,
 } from "@nestjs/common";
 import {
@@ -16,12 +15,16 @@ import {
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 
 import { GithubSyncService } from "./github-sync.service";
+import { UserDailyActivitiesService } from "./user-daily-activities.service";
 
 @ApiTags("Github")
 @ApiCookieAuth()
 @Controller("api/v1/github/sync")
 export class GithubSyncController {
-  constructor(private readonly githubSyncService: GithubSyncService) {}
+  constructor(
+    private readonly githubSyncService: GithubSyncService,
+    private readonly userDailyActivitiesService: UserDailyActivitiesService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
@@ -59,26 +62,16 @@ export class GithubSyncController {
     );
   }
 
-  @Post("commits/:repositoryId")
-  @HttpCode(HttpStatus.ACCEPTED)
+  @Post("me/activities/recalculate")
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: "Queue a GitHub commits sync (development)",
+    summary: "Recalculate daily activities",
   })
-  async syncCommits(
-    @Session() session: UserSession,
-    @Param("repositoryId") repositoryId: string,
-  ) {
+  async recalculateActivities(@Session() session: UserSession) {
     if (process.env.NODE_ENV !== "development") {
-      throw new ForbiddenException();
+      throw new NotFoundException();
     }
 
-    return this.githubSyncService.enqueue(
-      {
-        userId: session.user.id,
-        resourceType: "commits",
-        repositoryId,
-      },
-      "manual",
-    );
+    return this.userDailyActivitiesService.recalculate(session.user.id);
   }
 }

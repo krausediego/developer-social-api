@@ -10,6 +10,7 @@ import { GithubSyncService } from "./github-sync.service";
 import { GithubSyncCursorService } from "./github-sync-cursor.service";
 import { GithubSyncProcessor } from "./github-sync-processor";
 import { GithubSyncSchedulerService } from "./github-sync-scheduler.service";
+import { UserDailyActivitiesService } from "./user-daily-activities.service";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { GithubSyncSchedulerService } from "./github-sync-scheduler.service";
     GithubCommitsService,
     GithubSyncCursorService,
     GithubSyncSchedulerService,
+    UserDailyActivitiesService,
   ],
 })
 export class GithubModule {}

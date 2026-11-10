@@ -3,7 +3,7 @@ type StreakResult = {
   longestStreak: number;
 };
 
-const DAY_IN_MS = 86_400_00;
+const DAY_IN_MS = 86_400_000;
 
 function toDayNumber(date: string): number {
   const [year, month, day] = date.split("-").map(Number);
