@@ -1,0 +1,1 @@
+ALTER TABLE "github_pull_requests" ADD CONSTRAINT "github_pull_requests_github_pr_id_key" UNIQUE("github_pr_id");

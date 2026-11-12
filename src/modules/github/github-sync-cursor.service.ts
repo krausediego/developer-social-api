@@ -11,6 +11,12 @@ const MANUAL_COOLDOWN_MS = 5 * 60 * 1000;
 
 type SyncTrigger = "manual" | "automatic";
 
+const SYNC_INTERVAL_MS = {
+  repositories: 30 * 60_000,
+  commits: 6 * 60 * 60_000,
+  pull_requests: 6 * 60 * 60_000,
+} as const;
+
 type CanEnqueueResponse = {
   allowed: boolean;
   retryAt: Date | null;
@@ -103,15 +109,17 @@ export class GithubSyncCursorService {
   ): Promise<Date> {
     const now = new Date();
 
-    const intervalMs =
-      context.resourceType === "commits" ? 6 * 60 * 60_000 : 30 * 60_000;
-
     const [updated] = await this.db
       .update(githubSyncCursors)
       .set({
         status: "idle",
         lastSuccessAt: now,
-        nextSyncAt: new Date(now.getTime() + intervalMs),
+        nextSyncAt: new Date(
+          now.getTime() +
+            SYNC_INTERVAL_MS[
+              context.resourceType as keyof typeof SYNC_INTERVAL_MS
+            ],
+        ),
         retryCount: 0,
         errorCode: null,
         ...(options.clearCursor ? { cursor: null } : {}),

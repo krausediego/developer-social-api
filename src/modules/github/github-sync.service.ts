@@ -175,15 +175,19 @@ export class GithubSyncService {
         if (context.repositoryId !== null) {
           throw new BadRequestException("INVALID_SYNC_CONTEXT");
         }
-
         return GITHUB_JOBS.SYNC_REPOSITORIES;
 
       case "commits":
         if (context.repositoryId === null) {
           throw new BadRequestException("REPOSITORY_ID_REQUIRED");
         }
-
         return GITHUB_JOBS.SYNC_COMMITS;
+
+      case "pull_requests":
+        if (context.repositoryId === null) {
+          throw new BadRequestException("REPOSITORY_ID_REQUIRED");
+        }
+        return GITHUB_JOBS.SYNC_PULL_REQUESTS;
 
       default:
         throw new BadRequestException("UNSUPPORTED_SYNC_RESOURCE");

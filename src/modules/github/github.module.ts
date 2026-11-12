@@ -4,6 +4,7 @@ import { Module } from "@nestjs/common";
 import { QUEUES } from "@/infrastructure/queues";
 
 import { GithubCommitsService } from "./github-commits.service";
+import { GithubPullRequestsService } from "./github-pull-requests.service";
 import { GithubRepositoriesService } from "./github-repositories.service";
 import { GithubSyncController } from "./github-sync.controller";
 import { GithubSyncService } from "./github-sync.service";
@@ -27,6 +28,7 @@ import { UserDailyActivitiesService } from "./user-daily-activities.service";
     GithubSyncCursorService,
     GithubSyncSchedulerService,
     UserDailyActivitiesService,
+    GithubPullRequestsService,
   ],
 })
 export class GithubModule {}

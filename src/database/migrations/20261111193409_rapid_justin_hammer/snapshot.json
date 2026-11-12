@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d7215627-41d1-472f-8fda-3aaef9926258",
+  "prevIds": [
+    "2a61b9e1-67d3-409f-89bf-d8c86058e49a"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_unique",
+      "statementTarget": [
+        "table",
+        "public",
+        "github_pull_requests"
+      ],
+      "writes": [
+        "s|uq|public.github_pull_requests.github_pull_requests_github_pr_id_key",
+        "n|uq|public.github_pull_requests.github_pull_requests_github_pr_id_key",
+        "e|uq|public.github_pull_requests.github_pull_requests_github_pr_id_key",
+        "n|con|public.github_pull_requests.github_pull_requests_github_pr_id_key",
+        "n|rel|public.github_pull_requests_github_pr_id_key"
+      ],
+      "reads": [
+        "n|tbl|public.github_pull_requests",
+        "n|sch|public",
+        "n|col|public.github_pull_requests.github_pr_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "github_pull_requests",
+        "name": "github_pull_requests_github_pr_id_key",
+        "nameExplicit": false,
+        "columns": [
+          "github_pr_id"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    }
+  ]
+}

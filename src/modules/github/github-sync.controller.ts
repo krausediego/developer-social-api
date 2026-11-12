@@ -4,6 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  Param,
   Post,
 } from "@nestjs/common";
 import {
@@ -62,16 +63,23 @@ export class GithubSyncController {
     );
   }
 
-  @Post("me/activities/recalculate")
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: "Recalculate daily activities",
-  })
-  async recalculateActivities(@Session() session: UserSession) {
+  @Post("pull-requests/:repositoryId")
+  @HttpCode(HttpStatus.ACCEPTED)
+  async syncPullRequests(
+    @Session() session: UserSession,
+    @Param("repositoryId") repositoryId: string,
+  ) {
     if (process.env.NODE_ENV !== "development") {
       throw new NotFoundException();
     }
 
-    return this.userDailyActivitiesService.recalculate(session.user.id);
+    return this.githubSyncService.enqueue(
+      {
+        userId: session.user.id,
+        resourceType: "pull_requests",
+        repositoryId,
+      },
+      "manual",
+    );
   }
 }

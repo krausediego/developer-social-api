@@ -6,9 +6,11 @@ import { PinoLogger } from "nestjs-pino";
 import { GITHUB_JOBS, QUEUES } from "@/infrastructure/queues";
 
 import { GithubCommitsService } from "./github-commits.service";
+import { GithubPullRequestsService } from "./github-pull-requests.service";
 import { GithubRepositoriesService } from "./github-repositories.service";
 import { GithubSyncJobData } from "./github-sync.service";
 import { GithubSyncCursorService } from "./github-sync-cursor.service";
+import { UserDailyActivitiesService } from "./user-daily-activities.service";
 
 @Processor(QUEUES.GITHUB_SYNC, {
   concurrency: 1,
@@ -19,6 +21,8 @@ export class GithubSyncProcessor extends WorkerHost {
     private readonly githubSyncCursorService: GithubSyncCursorService,
     private readonly githubRepositoriesService: GithubRepositoriesService,
     private readonly githubCommitsService: GithubCommitsService,
+    private readonly userDailyActivitiesService: UserDailyActivitiesService,
+    private readonly githubPullRequestsService: GithubPullRequestsService,
     private readonly logger: PinoLogger,
   ) {
     super();
@@ -51,7 +55,33 @@ export class GithubSyncProcessor extends WorkerHost {
 
         return this.executeSync(
           job,
-          () => this.githubCommitsService.sync(context),
+          async () => {
+            const result = await this.githubCommitsService.sync(context);
+
+            await this.userDailyActivitiesService.recalculate(context.userId);
+
+            return result;
+          },
+          (result) => !result.hasMore,
+        );
+
+      case GITHUB_JOBS.SYNC_PULL_REQUESTS:
+        if (
+          context.resourceType !== "pull_requests" ||
+          context.repositoryId === null
+        ) {
+          throw new Error("INVALID_SYNC_CONTEXT");
+        }
+
+        return this.executeSync(
+          job,
+          async () => {
+            const result = this.githubPullRequestsService.sync(context);
+
+            await this.userDailyActivitiesService.recalculate(context.userId);
+
+            return result;
+          },
           (result) => !result.hasMore,
         );
 
@@ -76,7 +106,9 @@ export class GithubSyncProcessor extends WorkerHost {
 
       if (isFinished(result)) {
         await this.githubSyncCursorService.markSucceeded(context, {
-          clearCursor: context.resourceType === "commits",
+          clearCursor: ["commits", "pull_requests"].includes(
+            context.resourceType,
+          ),
         });
 
         this.logger.info(

@@ -209,4 +209,78 @@ export class GithubSyncSchedulerService {
       );
     }
   }
+
+  @Cron(CronExpression.EVERY_5_MINUTES, {
+    name: "github-pull-requests-due",
+    waitForCompletion: true,
+  })
+  async enqueueDuePullRequests(): Promise<void> {
+    const now = new Date();
+
+    const dueRepositories = await this.db
+      .selectDistinct({
+        userId: userRepositoryAccess.userId,
+        repositoryId: userRepositoryAccess.repositoryId,
+      })
+      .from(userRepositoryAccess)
+      .innerJoin(
+        githubRepositories,
+        eq(userRepositoryAccess.repositoryId, githubRepositories.id),
+      )
+      .innerJoin(
+        accounts,
+        and(
+          eq(accounts.userId, userRepositoryAccess.userId),
+          eq(accounts.providerId, "github"),
+        ),
+      )
+      .leftJoin(
+        githubSyncCursors,
+        and(
+          eq(githubSyncCursors.userId, userRepositoryAccess.userId),
+          eq(githubSyncCursors.repositoryId, userRepositoryAccess.repositoryId),
+          eq(githubSyncCursors.resourceType, "pull_requests"),
+        ),
+      )
+      .where(
+        and(
+          eq(userRepositoryAccess.syncEnabled, true),
+          eq(githubRepositories.visibility, "public"),
+          eq(githubRepositories.isFork, false),
+          or(
+            isNull(githubSyncCursors.id),
+            and(
+              inArray(githubSyncCursors.status, ["idle", "error"]),
+              or(
+                isNull(githubSyncCursors.nextSyncAt),
+                lte(githubSyncCursors.nextSyncAt, now),
+              ),
+            ),
+          ),
+        ),
+      )
+      .limit(BATCH_SIZE);
+
+    for (const repository of dueRepositories) {
+      try {
+        await this.githubSyncService.enqueue(
+          {
+            userId: repository.userId,
+            repositoryId: repository.repositoryId,
+            resourceType: "pull_requests",
+          },
+          "automatic",
+        );
+      } catch (error) {
+        this.logger.error(
+          {
+            err: error,
+            userId: repository.userId,
+            repositoryId: repository.repositoryId,
+          },
+          "Failed to enqueue pull requests sync",
+        );
+      }
+    }
+  }
 }

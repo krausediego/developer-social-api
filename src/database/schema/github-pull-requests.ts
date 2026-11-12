@@ -16,7 +16,7 @@ export const githubPullRequests = snakeCase.table(
     id: text()
       .primaryKey()
       .$defaultFn(() => createId()),
-    githubPrId: bigint({ mode: "bigint" }).notNull(),
+    githubPrId: bigint({ mode: "bigint" }).notNull().unique(),
     repositoryId: text()
       .notNull()
       .references(() => githubRepositories.id, { onDelete: "cascade" }),
