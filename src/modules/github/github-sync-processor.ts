@@ -6,6 +6,7 @@ import { PinoLogger } from "nestjs-pino";
 import { GITHUB_JOBS, QUEUES } from "@/infrastructure/queues";
 
 import { GithubCommitsService } from "./github-commits.service";
+import { GithubIssuesService } from "./github-issues.service";
 import { GithubPullRequestsService } from "./github-pull-requests.service";
 import { GithubRepositoriesService } from "./github-repositories.service";
 import { GithubSyncJobData } from "./github-sync.service";
@@ -23,6 +24,7 @@ export class GithubSyncProcessor extends WorkerHost {
     private readonly githubCommitsService: GithubCommitsService,
     private readonly userDailyActivitiesService: UserDailyActivitiesService,
     private readonly githubPullRequestsService: GithubPullRequestsService,
+    private readonly githubIssuesService: GithubIssuesService,
     private readonly logger: PinoLogger,
   ) {
     super();
@@ -76,7 +78,26 @@ export class GithubSyncProcessor extends WorkerHost {
         return this.executeSync(
           job,
           async () => {
-            const result = this.githubPullRequestsService.sync(context);
+            const result = await this.githubPullRequestsService.sync(context);
+
+            await this.userDailyActivitiesService.recalculate(context.userId);
+
+            return result;
+          },
+          (result) => !result.hasMore,
+        );
+
+      case GITHUB_JOBS.SYNC_ISSUES:
+        if (
+          context.resourceType !== "issues" ||
+          context.repositoryId === null
+        ) {
+          throw new Error("INVALID_SYNC_CONTEXT");
+        }
+        return this.executeSync(
+          job,
+          async () => {
+            const result = await this.githubIssuesService.sync(context);
 
             await this.userDailyActivitiesService.recalculate(context.userId);
 
@@ -106,7 +127,7 @@ export class GithubSyncProcessor extends WorkerHost {
 
       if (isFinished(result)) {
         await this.githubSyncCursorService.markSucceeded(context, {
-          clearCursor: ["commits", "pull_requests"].includes(
+          clearCursor: ["commits", "pull_requests", "issues"].includes(
             context.resourceType,
           ),
         });

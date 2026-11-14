@@ -189,6 +189,12 @@ export class GithubSyncService {
         }
         return GITHUB_JOBS.SYNC_PULL_REQUESTS;
 
+      case "issues":
+        if (context.repositoryId === null) {
+          throw new BadRequestException("REPOSITORY_ID_REQUIRED");
+        }
+        return GITHUB_JOBS.SYNC_ISSUES;
+
       default:
         throw new BadRequestException("UNSUPPORTED_SYNC_RESOURCE");
     }

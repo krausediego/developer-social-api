@@ -76,7 +76,7 @@ export class GithubSyncController {
     return this.githubSyncService.enqueue(
       {
         userId: session.user.id,
-        resourceType: "pull_requests",
+        resourceType: "issues",
         repositoryId,
       },
       "manual",
