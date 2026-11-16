@@ -9,6 +9,7 @@ import { GithubCommitsService } from "./github-commits.service";
 import { GithubIssuesService } from "./github-issues.service";
 import { GithubPullRequestsService } from "./github-pull-requests.service";
 import { GithubRepositoriesService } from "./github-repositories.service";
+import { GithubReviewsService } from "./github-review.service";
 import { GithubSyncJobData } from "./github-sync.service";
 import { GithubSyncCursorService } from "./github-sync-cursor.service";
 import { UserDailyActivitiesService } from "./user-daily-activities.service";
@@ -25,6 +26,7 @@ export class GithubSyncProcessor extends WorkerHost {
     private readonly userDailyActivitiesService: UserDailyActivitiesService,
     private readonly githubPullRequestsService: GithubPullRequestsService,
     private readonly githubIssuesService: GithubIssuesService,
+    private readonly githubReviewsService: GithubReviewsService,
     private readonly logger: PinoLogger,
   ) {
     super();
@@ -103,6 +105,20 @@ export class GithubSyncProcessor extends WorkerHost {
 
             return result;
           },
+          (result) => !result.hasMore,
+        );
+
+      case GITHUB_JOBS.SYNC_REVIEWS:
+        if (
+          context.resourceType !== "reviews" ||
+          context.repositoryId === null
+        ) {
+          throw new Error("INVALID_SYNC_CONTEXT");
+        }
+
+        return this.executeSync(
+          job,
+          () => this.githubReviewsService.sync(context),
           (result) => !result.hasMore,
         );
 

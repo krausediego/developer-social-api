@@ -3,3 +3,4 @@ export * from "./get-today-in-timezone";
 export * from "./parse-commit-checkpoint";
 export * from "./parse-issue-checkpoint";
 export * from "./parse-pull-request-checkpoint";
+export * from "./parse-review-checkpoint";

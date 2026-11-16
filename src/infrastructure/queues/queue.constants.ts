@@ -7,4 +7,5 @@ export const GITHUB_JOBS = {
   SYNC_COMMITS: "sync-commits",
   SYNC_PULL_REQUESTS: "sync-pull-requests",
   SYNC_ISSUES: "sync-issues",
+  SYNC_REVIEWS: "sync-reviews",
 } as const;

@@ -195,6 +195,12 @@ export class GithubSyncService {
         }
         return GITHUB_JOBS.SYNC_ISSUES;
 
+      case "reviews":
+        if (context.repositoryId === null) {
+          throw new BadRequestException("REPOSITORY_ID_REQUIRED");
+        }
+        return GITHUB_JOBS.SYNC_REVIEWS;
+
       default:
         throw new BadRequestException("UNSUPPORTED_SYNC_RESOURCE");
     }

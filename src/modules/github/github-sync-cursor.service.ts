@@ -16,6 +16,7 @@ const SYNC_INTERVAL_MS = {
   commits: 6 * 60 * 60_000,
   pull_requests: 6 * 60 * 60_000,
   issues: 6 * 60 * 60_000,
+  reviews: 6 * 60 * 60_000,
 } as const;
 
 type CanEnqueueResponse = {
